@@ -1,0 +1,132 @@
+pragma solidity ^0.8.0;
+
+contract AIRecommendation {
+    mapping(string => string) private recommendations;
+
+    // Set AI-recommended product information
+    function setRecommendation(string memory input, string memory recommendation) public {
+        recommendations[input] = recommendation;
+    }
+
+    // Get AI-recommended product information
+    function getRecommendation(string memory input) public view returns (string memory) {
+        return recommendations[input];
+    }
+}
+
+contract ProductReviewSystem {
+    struct Review {
+        address reviewer;
+        uint256 productId;
+        string comment;
+        uint8 rating;
+        uint256 timestamp;
+        bool isDeleted;
+    }
+
+    struct ProductStats {
+        uint256 totalRating;
+        uint256 reviewCount;
+    }
+
+    struct User {
+        bool isRegistered;
+        uint256 userId;
+    }
+
+    Review[] public reviews;
+    mapping(address => User) public users;
+    mapping(uint256 => address) public userIdToAddress;
+    mapping(uint256 => ProductStats) public productStats;
+
+    uint256 public totalUsers;
+    uint256 public totalProducts;
+
+    // AI recommendation contract address
+    AIRecommendation public aiRecommendationContract;
+
+    // Review added event
+    event ReviewAdded(address indexed reviewer, uint256 indexed productId, string comment, uint8 rating);
+
+    // User registration
+    function registerUser() public {
+        require(!users[msg.sender].isRegistered, "User is already registered");
+
+        totalUsers++;
+        users[msg.sender] = User(true, totalUsers);
+        userIdToAddress[totalUsers] = msg.sender;
+    }
+
+    // Submit a product review
+    function addReview(uint256 productId, string memory comment, uint8 rating) public {
+        require(users[msg.sender].isRegistered, "User is not registered");
+        require(productId > 0, "Invalid product ID");
+        require(bytes(comment).length > 0, "Comment cannot be empty");
+        require(rating >= 1 && rating <= 5, "Rating should be between 1 and 5");
+
+        reviews.push(Review(msg.sender, productId, comment, rating, block.timestamp, false));
+
+        // Update rating statistics
+        productStats[productId].totalRating += rating;
+        productStats[productId].reviewCount++;
+
+        emit ReviewAdded(msg.sender, productId, comment, rating);
+    }
+
+    // Get total number of reviews
+    function getReviewCount() public view returns (uint256) {
+        return reviews.length;
+    }
+
+    // Get review information at the specified index
+    function getReview(uint256 index) public view returns (address, uint256, string memory, uint8, uint256, bool) {
+        require(index < reviews.length, "Invalid review index");
+        Review memory review = reviews[index];
+        return (review.reviewer, review.productId, review.comment, review.rating, review.timestamp, review.isDeleted);
+    }
+
+    // Get user identity information
+    function getUserIdentity() public view returns (bool, uint256) {
+        User memory user = users[msg.sender];
+        return (user.isRegistered, user.userId);
+    }
+
+    // Get average rating and total review count for a product
+    function getProductStats(uint256 productId) public view returns (uint256, uint256) {
+        return (productStats[productId].totalRating, productStats[productId].reviewCount);
+    }
+
+    // Set the AI recommendation contract address
+    function setAIRecommendationContract(address contractAddress) public {
+        aiRecommendationContract = AIRecommendation(contractAddress);
+    }
+
+    // Get AI-recommended product information
+    function getAIRecommendation(string memory input) public view returns (string memory) {
+        return aiRecommendationContract.getRecommendation(input);
+    }
+
+    // Update a review
+    function updateReview(uint256 index, string memory comment, uint8 rating) public {
+        require(index < reviews.length, "Invalid review index");
+        require(!reviews[index].isDeleted, "Review has been deleted");
+        require(msg.sender == reviews[index].reviewer, "Only the reviewer can update the review");
+
+        reviews[index].comment = comment;
+        reviews[index].rating = rating;
+    }
+
+    // Delete a review
+    function deleteReview(uint256 index) public {
+        require(index < reviews.length, "Invalid review index");
+        require(!reviews[index].isDeleted, "Review has already been deleted");
+        require(msg.sender == reviews[index].reviewer, "Only the reviewer can delete the review");
+
+        // Mark the review as deleted
+        reviews[index].isDeleted = true;
+
+        // Update rating statistics
+        productStats[reviews[index].productId].totalRating -= reviews[index].rating;
+        productStats[reviews[index].productId].reviewCount--;
+    }
+}
