@@ -1,25 +1,24 @@
-import 
-contract ratemoodel is smsm {
-    event NewInterestParams(uint baseRatePerBlock, uint multiplierPerBlock, uint jumpMultiplierPerBlock, uint kink);
+pragma solidity ^0.8.0;
 
+contract k{
 uint healthfactor;
-uint256 private constant BASE = 1e18;
-uint public constant blocksPerYear = 2102400;
-uint public multiplierPerBlock;
-uint public baseRatePerBlock;
-uint public jumpMultiplierPerBlock;
-uint public kink;
+uint256  constant BASE = 1e18;
+uint  constant blocksPerYear = 2102400;
+uint  multiplierPerBlock;
+uint  baseRatePerBlock;
+uint  jumpMultiplierPerBlock;
+uint  kink;
 
 
-constructor(uint baseRatePerYear, uint multiplierPerYear, uint jumpMultiplierPerYear, uint kink_) public {
+constructor(uint baseRatePerYear, uint multiplierPerYear, uint jumpMultiplierPerYear, uint kink_) {
         baseRatePerBlock = baseRatePerYear / blocksPerYear;
         multiplierPerBlock = multiplierPerYear / blocksPerYear;
         jumpMultiplierPerBlock = jumpMultiplierPerYear / blocksPerYear;
         kink = kink_;
 
-        emit NewInterestParams(baseRatePerBlock, multiplierPerBlock, jumpMultiplierPerBlock, kink);
+        //emit NewInterestParams(baseRatePerBlock, multiplierPerBlock, jumpMultiplierPerBlock, kink);
     }
-  function getBorrowRate(uint healthfactor) override public view returns (uint) {
+  function getBorrowRate(uint healthfactor) public view returns (uint) {
        
 
         if (healthfactor <= kink) {
@@ -27,6 +26,8 @@ constructor(uint baseRatePerYear, uint multiplierPerYear, uint jumpMultiplierPer
         } else {
             uint normalRate = (kink * multiplierPerBlock/BASE) + baseRatePerBlock;
             uint excesshealthfactor = healthfactor - kink;
-            return (excesshealthfactor * jumpMultiplierPerBlock/BASE) + normalRate;
+            return( (excesshealthfactor * jumpMultiplierPerBlock/BASE) + normalRate)*10e18;
         }
     }
+
+}
